@@ -1,22 +1,37 @@
 import React from "react";
 import './Clock.scss'
+import PlusIcon from './components/PlusIcon'
+import MinusIcon from './components/MinusIcon'
+
+const DEFAULT_BREAK_LENGTH = 5
+const DEFAULT_SESSION_LENGTH = 25
+const DEFAULT_INTERVAL_AMOUNT = 1000
+const DEFAULT_AUDIO_SRC = '/assets/beepSound.wav'
+
+const integer = (input) => {
+  const output = parseInt(input)
+
+  return isNaN(output) ? undefined : output
+}
+
+const storedInteger = (key) => integer(localStorage.getItem(key))
 
 class Clock extends React.Component {
     //-----------------------
     constructor(props) {
         super(props)
         this.state = {
-            breakLength: props.defaultBreakLength || 5,
-            defaultBreakLength: props.defaultBreakLength || 5,
-            sessionLength: props.defaultSessionLength || 25,
-            defaultSessionLength: props.defaultSessionLength || 25,
-            display: `${props.defaultSessionLength || 25}:00`,
-            time: (props.defaultSessionLength || 25) * 60,
+            breakLength: props.defaultBreakLength ?? storedInteger('clock.breakLength') ?? DEFAULT_BREAK_LENGTH,
+            defaultBreakLength: props.defaultBreakLength ?? DEFAULT_BREAK_LENGTH,
+            sessionLength: props.defaultSessionLength ?? storedInteger('clock.sessionLength') ?? DEFAULT_SESSION_LENGTH,
+            defaultSessionLength: props.defaultSessionLength ?? DEFAULT_SESSION_LENGTH,
+            display: `${props.defaultSessionLength ?? DEFAULT_SESSION_LENGTH}:00`,
+            time: (props.defaultSessionLength ?? DEFAULT_SESSION_LENGTH) * 60,
             play: false,
             breakOn: false,
             interval: null,
-            intervalAmount: parseInt(props.intervalAmount) || 1000,
-            muted: props.muted || false
+            intervalAmount: parseInt(props.intervalAmount) ?? DEFAULT_INTERVAL_AMOUNT,
+            muted: props.muted ?? false
         }
         this.handlePlay = this.handlePlay.bind(this);
         this.handleStop = this.handleStop.bind(this);
@@ -26,6 +41,7 @@ class Clock extends React.Component {
         this.handleTimeChange = this.handleTimeChange.bind(this);
         this.getDisplay = this.getDisplay.bind(this);
         this.audio = null;
+        this.audioSrc = props.audioSrc ?? DEFAULT_AUDIO_SRC
     }
     //-----------------------
     handlePlay() {
@@ -37,7 +53,6 @@ class Clock extends React.Component {
             let interval = setInterval(this.countDown, state.intervalAmount);
             return { play: true, interval: interval, breakOn: false }
         });
-
     }
     //-----------------------
     handleStop() {
@@ -111,8 +126,8 @@ class Clock extends React.Component {
     }
     //-----------------------
     getDisplay(time) {
-        let minutes = Math.floor(time / 60) || 0,
-            seconds = time - Math.floor(time / 60) * 60 || 0;
+        let minutes = Math.floor(time / 60) ?? 0,
+            seconds = time - Math.floor(time / 60) * 60 ?? 0;
 
         minutes = `${minutes}`.padStart(2, '0')
         seconds = `${seconds}`.padStart(2, '0')
@@ -126,15 +141,15 @@ class Clock extends React.Component {
                 <div className="header px-4">
                     <div className="float-left">
                         <div id="break-label" className="label">Break length</div>
-                        <a onClick={this.handleTimeChange} id="break-decrement"><i className="fa fa-minus fa-fw" /></a>
+                        <a onClick={this.handleTimeChange} id="break-decrement"><MinusIcon /></a>
                         <div id="break-length" className="length">{this.state.breakLength}</div>
-                        <a onClick={this.handleTimeChange} id="break-increment"><i className="fa fa-plus fa-fw" /></a>
+                        <a onClick={this.handleTimeChange} id="break-increment"><PlusIcon /></a>
                     </div>
                     <div className="float-right">
                         <div id="session-label" className="label">Session time</div>
-                        <a onClick={this.handleTimeChange} id="session-decrement"><i className="fa fa-minus fa-fw" /></a>
+                        <a onClick={this.handleTimeChange} id="session-decrement"><MinusIcon /></a>
                         <div id="session-length" className="length">{this.state.sessionLength}</div>
-                        <a onClick={this.handleTimeChange} id="session-increment"><i className="fa fa-plus fa-fw" /></a>
+                        <a onClick={this.handleTimeChange} id="session-increment"><PlusIcon /></a>
                     </div>
                 </div>
                 <div id="timer-label" className={`timer-label ${this.state.breakOn ? 'break-on' : ''}`}>
@@ -154,7 +169,7 @@ class Clock extends React.Component {
                 <div className="footer small">
                     <a href="https://github.com/jm-sky/" target="_new">@jm-Sky</a>
                 </div>
-                <audio id="beep" preload="auto" ref={audio => this.audio = audio} src={this.props.audioSrc} />
+                <audio id="beep" preload="auto" ref={audio => this.audio = audio} src={this.audioSrc} />
             </div>
         )
     }
