@@ -1,4 +1,4 @@
-import { useState, createRef } from 'react'
+import { useState, useRef, createRef, useEffect, useCallback } from 'react'
 import './Clock.scss'
 import FaIcon from './components/FaIcon'
 import Footer from './components/Footer'
@@ -26,6 +26,7 @@ interface IProps {
 
 export default function Clock(props: IProps) {
   const audioRef = createRef<HTMLAudioElement>()
+  const intervalId = useRef<number>()
 
   const intervalAmount = props.intervalAmount ?? DEFAULT_INTERVAL_AMOUNT
   const defaultBreakLength = props.defaultBreakLength ?? DEFAULT_BREAK_LENGTH
@@ -37,32 +38,60 @@ export default function Clock(props: IProps) {
   const [time, setTime] = useState<number>((props.defaultSessionLength ?? DEFAULT_SESSION_LENGTH) * 60)
   const [play, setPlay] = useState<boolean>(false)
   const [breakOn, setBreakOn] = useState<boolean>(false)
-  const [timer, setTimer] = useState<number | undefined>(undefined)
   const [muted, setMuted] = useState<boolean>(props.muted ?? false)
   const [audioSrc] = useState<string>(props.audioSrc ?? DEFAULT_AUDIO_SRC)
 
-
-  const handlePlay = () => {
-    if (play) return handleStop()
-    
-    if (timer) clearInterval(timer)
-
-    const intervalId = setInterval(() => countDown(), intervalAmount)
-
-    setTimer(intervalId)
-    setPlay(true)
-    setBreakOn(false)
+  const stopAndClearInterval = () => {
+    clearInterval(intervalId.current)
+    setPlay(false)
   }
 
+  useEffect(() => {
+    return () => stopAndClearInterval()
+  }, [])
+
+  useEffect(() => {
+    if (!play) return
+    
+    if (intervalId.current) {
+      clearInterval(intervalId.current)
+    }
+
+    intervalId.current = setInterval(() => {
+      let newTime = time - 1
+
+      if (newTime < 0) {
+        setBreakOn(!breakOn)
+        newTime = breakOn ? breakLength : sessionLength;
+        newTime = newTime * 60;
+        muted ? null : audioRef.current?.play();
+      }
+  
+      setTime(newTime)
+      setDisplay(getDisplay(newTime))
+      setBreakOn(breakOn)
+    }, intervalAmount)
+  }, [audioRef, breakLength, breakOn, intervalAmount, muted, play, sessionLength, time])
+
+  const handlePlay = useCallback(() => {
+    setPlay(true)
+    setBreakOn(false)
+  }, [])
+
+  const togglePlay = useCallback(() => {
+    return play ? handleStop() : handlePlay()
+  }, [play])
+
   const handleStop = () => {
-    clearInterval(timer)
-    setTimer(undefined)
+    clearInterval(intervalId.current)
+    intervalId.current = undefined
+
     setPlay(false)
   }
 
   const handleReset = () => {
-    clearInterval(timer)
-    setTimer(undefined)
+    clearInterval(intervalId.current)
+    intervalId.current = undefined
 
     setPlay(false),
     setTime(defaultSessionLength * 60)
@@ -106,21 +135,6 @@ export default function Clock(props: IProps) {
     setDisplay(display)
   }
 
-  const countDown = () => {
-    let newTime = time - 1
-
-    if (newTime < 0) {
-      setBreakOn(!breakOn)
-      newTime = breakOn ? breakLength : sessionLength;
-      newTime = newTime * 60;
-      muted ? null : audioRef.current?.play();
-    }
-
-    setTime(newTime)
-    setDisplay(getDisplay(newTime))
-    setBreakOn(breakOn)
-  }
-
   const getDisplay = (time: number) => {
     const minutes = Math.floor(time / 60) ?? 0
     const seconds = time - Math.floor(time / 60) * 60
@@ -154,7 +168,7 @@ export default function Clock(props: IProps) {
         {display}
       </div>
       <div className="buttons">
-        <a id="start_stop" className={`button ${play ? 'active' : ''}`} onClick={handlePlay}>
+        <a id="start_stop" className={`button ${play ? 'active' : ''}`} onClick={togglePlay}>
           <FaIcon icon={`${play ? 'stop' : 'play'}`} />
         </a>
         <a id="reset" className="button" onClick={handleReset}><FaIcon icon="trash" /></a>
